@@ -107,7 +107,19 @@ function Batman(game) {
 	this.speed  = 100;
     this.ground = 300;
 	
+	//boxes 
+	this.boxRange = {startX: 0, endX:0 };
+	this.onBox = false;
+	//rectangles of objects
+	this.rectangles= [];
+	this.rectangles.push({x: 85, y:300, width:73, height:60 });
+	this.rectangles.push({x: 300, y:320, width:60, height:60 });
+	this.rectangles.push({x: 0, y:280, width:85, height:80 });
 	this.jumping = false;
+	this.isCollidedRight = false;
+	this.isCollidedLeft = false;
+	this.isCollidedTop = false;
+	this.isCollidedBottom = false;
 	
 	this.width = 40;
 	this.height = 60;
@@ -117,7 +129,71 @@ function Batman(game) {
 Batman.prototype = new Entity();
 Batman.prototype.constructor = Batman;
 
+
+Batman.prototype.collide = function (other) {
+    return ((this.x+15<=other.x && other.x<=(this.x+15+this.width)) || (this.x+15<=(other.x+other.width)&& (other.x+other.width)<=(this.x+15+this.width)))
+			&& ((this.y<=other.y && other.y<=this.y+this.height) || (this.y<=other.y+other.height && other.y+other.height <=this.y+this.height));
+};
+
+Batman.prototype.collideLeft = function (otherone) {
+    return (otherone.x+otherone.width)>=this.x && otherone.x+otherone.width< this.x+this.width;
+};
+
+Batman.prototype.collideRight = function (other) {
+    return  (this.x+this.width <= other.x) && ( (this.y+this.height)<=(other.y+other.height)) ;
+};
+
+
+Batman.prototype.collideBottom = function (other) {
+    return (this.y<=other.y);
+};
+
 Batman.prototype.update = function () {
+	
+	
+		//detect collision
+	for(var i =0; i<this.rectangles.length; i++){
+		var cur = this.rectangles[i];
+		if(this.collide(cur) ){
+			
+			if(this.collideRight(cur)){
+				console.log("right");
+				this.isCollidedRight = true;
+				this.isCollidedLeft = false;
+				this.isCollidedBottom = false;
+				this.onBox = false;
+				break;
+			}
+			if(this.collideLeft(cur)){
+				console.log("left");
+				this.isCollidedLeft = true;
+				this.isCollidedRight = false;
+				this.isCollidedBottom = false;
+				this.onBox = false;
+				break;
+			}
+			if(this.collideBottom(cur)){
+				console.log("thisX " + this.x+"  otherX "+cur.x + " this x+width " + (this.x+this.width)+ " otherXwidth " + (cur.x+cur.width));
+				this.isCollidedBottom = true;
+				this.isCollidedLeft = false;
+				this.isCollidedRight = false;
+				this.y = cur.y-cur.height;
+				this.onBox = true;
+				this.boxRange.startX = cur.x;
+				this.boxRange.endX = cur.x+cur.width;
+				console.log(this.boxRange.startX + " " + this.boxRange.endX);
+				break;
+			}
+			
+			
+		}else{
+			if(!this.onBox){
+				this.y = 300;
+			}
+		}
+		//console.log(cur.y);
+
+	}
 	
 		if (this.game.space) this.jumping = true;
 	  if(this.game.boom){
@@ -167,18 +243,23 @@ Batman.prototype.update = function () {
      
 
     }
-
 	
 
     if(Key.isDown(Key.RIGHT)){
-		if(this.x<570){
-      this.x += this.game.clockTick * this.speed;
+		if(this.x<600 && (!this.isCollidedRight || this.onBox)  ){
+			this.x += this.game.clockTick * this.speed;
+		}else if(this.jumping){
+			this.x += this.game.clockTick * this.speed;
 		}
-	  this.facingRight = true;
+		this.isCollidedLeft = false;
+		this.facingRight = true;
     }else if (Key.isDown(Key.LEFT)){
-		if(this.x>100){
+		if(this.x>63 && (!this.isCollidedLeft || this.onBox) ){
+			this.x -= this.game.clockTick * this.speed;
+		}else if(this.jumping){
 			this.x -= this.game.clockTick * this.speed;
 		}
+		 this.isCollidedRight =false;
 		 this.facingRight = false;
     }
     Entity.prototype.update.call(this);
@@ -219,6 +300,59 @@ Batman.prototype.draw = function (ctx) {
 
     Entity.prototype.draw.call(this);
 }
+///////////////////////////////////////////////////////////////////////////////////
+function SuperAI(game) {
+	this.facingRight = true;
+    this.idleRightAnimation = new Animation(ASSET_MANAGER.getAsset("./img/guyright.png"), 17, 320, 140,106 , 0.2, 5, true, false);
+	this.idleLeftAnimation = new Animation(ASSET_MANAGER.getAsset("./img/guy.png"), 17, 320, 140, 106, 0.2, 5, true, true);
+
+
+	this.facingRight = true;
+
+    this.booming = false;
+    this.radius = 100;
+	this.speed  = 100;
+    this.ground = 300;
+	this.x = 470;
+	this.y = 300;
+	
+	this.width = 40;
+	this.height = 60;
+    Entity.call(this, game, 470, 300);
+}
+
+SuperAI.prototype = new Entity();
+SuperAI.prototype.constructor = SuperAI;
+
+
+SuperAI.prototype.update = function () {
+	
+	if(this.facingRight){
+		
+		this.x += this.game.clockTick * this.speed;
+		if(this.x>=550){
+			this.facingRight = false;
+		}
+	}else{
+		this.x -= this.game.clockTick * this.speed;
+		if(this.x<=340){
+			this.facingRight = true;
+		}
+	}
+
+    Entity.prototype.update.call(this);
+}
+
+SuperAI.prototype.draw = function (ctx) {
+	if(this.facingRight){
+		this.idleRightAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+	}else{
+		this.idleLeftAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+	}
+	
+    Entity.prototype.draw.call(this);
+}
+///////////////////////////////////////////////////////////////////////////////
 
 // the "main" code begins here
 
@@ -226,6 +360,8 @@ var ASSET_MANAGER = new AssetManager();
 
 ASSET_MANAGER.queueDownload("./img/batmanright.png");
 ASSET_MANAGER.queueDownload("./img/batmanbackward.png");
+ASSET_MANAGER.queueDownload("./img/guy.png");
+ASSET_MANAGER.queueDownload("./img/guyright.png");
 ASSET_MANAGER.queueDownload("./img/background.jpg");
 ASSET_MANAGER.downloadAll(function () {
     console.log("starting up da sheild");
@@ -234,12 +370,15 @@ ASSET_MANAGER.downloadAll(function () {
 
     var gameEngine = new GameEngine();
     var batman = new Batman(gameEngine);
-	
+	var superman =  new SuperAI(gameEngine);
 	
     gameEngine.init(ctx);
     gameEngine.start();
 	var bg = new Background(gameEngine, ASSET_MANAGER.getAsset("./img/background.jpg"));
 	gameEngine.addEntity(bg);
     gameEngine.addEntity(batman);
+	gameEngine.addEntity(superman);
+	
+	
 	
 });
