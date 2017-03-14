@@ -8,34 +8,22 @@ socket.on('load', function (data) {
   if(data.studentname) {
     globalGameEngine.entities[1].x = data.mystate.batman_x,
     globalGameEngine.entities[1].y = data.mystate.batman_y,
+	 globalGameEngine.entities[1].facingRight = data.mystate.batman_facingRight,
 	globalGameEngine.entities[2].x = data.mystate.otherguy_x,
-    globalGameEngine.entities[2].y = data.mystate.otherguy_y
-    console.log(data.batmanx)
-    console.log(globalGameEngine.rainy)
+    globalGameEngine.entities[2].y = data.mystate.otherguy_y,
+	globalGameEngine.entities[2].facingRight = data.mystate.otherguy_facingRight
   }
   document.getElementById("gameWorld").focus();
 });
-
-
-document.getElementById("buttonLoad").onclick = function () { 
-	socket.emit('load', 
-	{ studentname: "Munkhbayar Ganbold",
-	 statename: "saved state"});
-	 
- 
- };
-
-
- document.getElementById("buttonSave").onclick = function (){ 
-		globalGameEngine.save(globalGameEngine)
-	};
 
 GameEngine.prototype.save = function (that) {
   var data = {
     batman_x: that.entities[1].x,
 	batman_y: that.entities[1].y,
+	batman_facingRight: that.entities[1].facingRight,
 	otherguy_x: that.entities[2].x,
-	otherguy_y: that.entities[2].y
+	otherguy_y: that.entities[2].y,
+	otherguy_facingRight: that.entities[2].facingRight
   }
   socket.emit('save', { studentname: "Munkhbayar Ganbold", statename: "saved state", mystate: data});
 	document.getElementById("gameWorld").focus();
@@ -89,6 +77,18 @@ GameEngine.prototype.init = function (ctx) {
     this.startInput();
 	var that = this;
     this.timer = new Timer();
+	this.saveRect = {
+		x:600,
+		y:40,
+		width:150,
+		height:50
+	};
+	this.loadRec = {
+		x:600,
+		y:100,
+		width:150,
+		height:50
+	};
     console.log('game initialized');
 }
 
@@ -96,17 +96,43 @@ GameEngine.prototype.init = function (ctx) {
 GameEngine.prototype.start = function () {
     console.log("starting game");
     var that = this;
-    document.getElementById("gameWorld").focus();	
     (function gameLoop() {
         that.loop();
         requestAnimFrame(gameLoop, that.ctx.canvas);
     })();
 }
 
+function getMousePos(ctx, event) {
+		 rect = ctx.canvas.getBoundingClientRect();
+		return {
+			x: event.clientX - rect.left,
+			y: event.clientY - rect.top
+		};
+}
+
+function isInside(pos, rect){
+		return pos.x > rect.x && pos.x < rect.x+rect.width && pos.y < rect.y+rect.height && pos.y > rect.y
+}
+
 GameEngine.prototype.startInput = function () {
     console.log('Starting input');
     var that = this;
+	
+		this.ctx.canvas.addEventListener('click', function(evt) {
+		var mousePos = getMousePos(that.ctx, evt);
 
+		if (isInside(mousePos,that.saveRect)) {
+			console.log("clicked save");
+			globalGameEngine.save(globalGameEngine)
+		}else if (isInside(mousePos,that.loadRec)){
+			console.log("clicked load");
+			socket.emit('load', 
+				{ studentname: "Munkhbayar Ganbold",
+				 statename: "saved state"});
+			
+		}
+	}, false);
+	
     this.ctx.canvas.addEventListener("keydown", function (e) {
         if (String.fromCharCode(e.which) === 'D'){
            that.boom = true;
@@ -184,6 +210,17 @@ Entity.prototype.update = function () {
 }
 
 Entity.prototype.draw = function (ctx) {
+	
+	//drawing button
+	this.game.ctx.strokeStyle = "#FF0000";
+	this.game.ctx.font = '900 50px Eagle Lake';
+    this.game.ctx.fillStyle = "#FFFF00";
+    this.game.ctx.strokeText("Save", this.game.saveRect.x, this.game.saveRect.y+50);
+    this.game.ctx.fillText("Save", this.game.saveRect.x, this.game.saveRect.y+50);
+	this.game.ctx.strokeText("Load", this.game.loadRec.x, this.game.loadRec.y+50);
+    this.game.ctx.fillText("Load", this.game.loadRec.x, this.game.loadRec.y+50);
+	//end of drawing button
+	
     if (this.game.showOutlines && this.radius) {
         this.game.ctx.beginPath();
         this.game.ctx.strokeStyle = "green";
