@@ -1,5 +1,47 @@
 // This game shell was happily copied from Googler Seth Ladd's "Bad Aliens" game and his Google IO talk in 2011
 
+var socket = io.connect("http://76.28.150.193:8888");
+var globalGameEngine = null;
+	
+	
+socket.on('load', function (data) {
+  if(data.studentname) {
+    globalGameEngine.entities[1].x = data.mystate.batman_x,
+    globalGameEngine.entities[1].y = data.mystate.batman_y,
+	globalGameEngine.entities[2].x = data.mystate.otherguy_x,
+    globalGameEngine.entities[2].y = data.mystate.otherguy_y
+    console.log(data.batmanx)
+    console.log(globalGameEngine.rainy)
+  }
+  document.getElementById("gameWorld").focus();
+});
+
+
+document.getElementById("buttonLoad").onclick = function () { 
+	socket.emit('load', 
+	{ studentname: "Munkhbayar Ganbold",
+	 statename: "saved state"});
+	 
+ 
+ };
+
+
+ document.getElementById("buttonSave").onclick = function (){ 
+		globalGameEngine.save(globalGameEngine)
+	};
+
+GameEngine.prototype.save = function (that) {
+  var data = {
+    batman_x: that.entities[1].x,
+	batman_y: that.entities[1].y,
+	otherguy_x: that.entities[2].x,
+	otherguy_y: that.entities[2].y
+  }
+  socket.emit('save', { studentname: "Munkhbayar Ganbold", statename: "saved state", mystate: data});
+	document.getElementById("gameWorld").focus();
+}
+
+
 window.requestAnimFrame = (function () {
     return window.requestAnimationFrame ||
             window.webkitRequestAnimationFrame ||
@@ -37,6 +79,7 @@ function GameEngine() {
     this.wheel = null;
     this.surfaceWidth = null;
     this.surfaceHeight = null;
+	globalGameEngine = this;
 }
 
 GameEngine.prototype.init = function (ctx) {
@@ -44,9 +87,11 @@ GameEngine.prototype.init = function (ctx) {
     this.surfaceWidth = this.ctx.canvas.width;
     this.surfaceHeight = this.ctx.canvas.height;
     this.startInput();
+	var that = this;
     this.timer = new Timer();
     console.log('game initialized');
 }
+
 
 GameEngine.prototype.start = function () {
     console.log("starting game");
