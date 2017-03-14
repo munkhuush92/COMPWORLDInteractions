@@ -145,7 +145,8 @@ Batman.prototype.collideRight = function (other) {
 
 
 Batman.prototype.collideBottom = function (other) {
-    return (this.y<=other.y);
+   return (this.y+this.height>other.y )
+		&& (this.x+this.width>=other.x && this.x<=other.x+other.width )
 };
 
 Batman.prototype.update = function () {
